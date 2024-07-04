@@ -1,32 +1,43 @@
 import paho.mqtt.client as mqtt
+import random
 import time
+import json
 
-
-# Definirea funcțiilor callback
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
-    client.subscribe("/training/device/prenume-nume/")
-
+    if rc == 0:
+        print("Connection successful")
+        client.subscribe("/training/device/Eliza-Cace/")
+    else:
+        print("Connection failed")
 
 def on_message(client, userdata, msg):
     print(msg.topic + " " + str(msg.payload))
 
-
-# Crearea unui client MQTT
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
-# Conectare la brokerul MQTT
-client.connect("mqtt.beia-telemetrie.ro", 1883, 60)
+try:
+    client.connect("mqtt.beia-telemetrie.ro", 1883, 60)
+except Exception as e:
+    print(f"Connection failed: {e}")
 
-# Loop pentru menținerea conexiunii și trimiterea mesajelor
 client.loop_start()
 
 try:
     while True:
-        client.publish("/training/device/prenume-nume/", "Test message")
+        temperatura = round(random.uniform(10.0, 40.0), 2)
+        umiditate = round(random.uniform(30.0, 80.0), 2)
+        data = {
+            "temperature": temperatura,
+            "humidity": umiditate
+        }
+        payload = json.dumps(data)
+        client.publish("/training/device/Eliza-Cace/", payload)
+        print(f"Published - {payload}")
         time.sleep(5)
+
 except KeyboardInterrupt:
     print("Exiting...")
     client.loop_stop()
