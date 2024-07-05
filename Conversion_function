@@ -1,0 +1,15 @@
+
+// Extract the temperature and humidity from the incoming message
+var temperature = msg.payload.temperature;
+var humidity = msg.payload.humidity;
+
+// Format the data according to InfluxDB's line protocol
+var measurement = "sensor_data";
+var tags = "device=Eliza-Cace";
+var fields = `temperature=${temperature},humidity=${humidity}`;
+
+// Construct the line protocol string
+msg.payload = `${measurement},${tags} ${fields}`;
+
+// Return the modified message
+return msg;
