@@ -1,0 +1,75 @@
+from telegram import Update, Bot                                            
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from influxdb import InfluxDBClient
+#from influxdb_client import InfluxDBClient, Point, WritePrecision
+import logging
+
+TELEGRAM_TOKEN = '7332959154:AAH-MGSjvbWdp2oFHvZC3Ml08EqQhTqh04w'
+
+INFLUXDB_URL = 'localhost'
+INFLUXDB_PORT = 8086
+INFLUXDB_DBNAME = 'mydb'
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+def chunk_string(string, length):
+    """Helper function to split a string into chunks of a specified length."""
+    return [string[i:i+length] for i in range(0, len(string), length)]
+
+def extract_values(value_string):
+    temperature = None
+    humidity = None
+    parts = value_string.split(',')
+    for part in parts:
+        if part.startswith('device=Eliza-Cace temperature'):
+            temperature = part.split('device=Eliza-Cace temperature=')[1]
+        elif part.startswith('humidity'):
+            humidity = part.split('=')[1]
+    return temperature, humidity  
+
+async def start(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text('Hello!')
+
+async def query_data(update: Update, context: CallbackContext) -> None:
+    influx_client = InfluxDBClient(host=INFLUXDB_URL, port=INFLUXDB_PORT, database=INFLUXDB_DBNAME)
+    query = 'SELECT * FROM sensor_data'
+    logger.info(f'Executing query: {query}')
+    result = influx_client.query(query)
+    logger.info(f'Query result: {result}')
+
+    response = 'Query results:\n'
+    if not result:
+            response = 'No data'
+    else:
+        for point in result.get_points():
+            logger.info(f"Point: {point}")
+            time = point['time']
+            value_string = point['value']
+            temperature, humidity = extract_values(value_string)
+            response += f'{time}: {temperature}°C, {humidity}%\n'
+
+    max_length = 4096  # Telegram's maximum message length
+    response_chunks = chunk_string(response, max_length)
+
+    for chunk in response_chunks:
+        await update.message.reply_text(chunk)
+    
+async def echo(update: Update, context: CallbackContext) -> None:
+    await update.message.reply_text(update.message.text)
+
+def main() -> None:
+    application = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("query", query_data))
+
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
