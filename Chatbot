@@ -4,7 +4,7 @@ from influxdb import InfluxDBClient
 #from influxdb_client import InfluxDBClient, Point, WritePrecision
 import logging
 
-TELEGRAM_TOKEN = '7332959154:AAH-MGSjvbWdp2oFHvZC3Ml08EqQhTqh04w'
+TELEGRAM_TOKEN = 'myownlink'
 
 INFLUXDB_URL = 'localhost'
 INFLUXDB_PORT = 8086
